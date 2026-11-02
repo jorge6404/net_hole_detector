@@ -1,0 +1,32 @@
+[package]
+name = "net_hole_detector_rust"
+version = "0.1.0"
+authors = ["Jorge Castro <jorgee6404@gmail.com>"]
+edition = "2021"
+
+# Librería sin ROS (CLAHE, escala de la red, geometría, YOLO, inferencia) + el nodo
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "net_hole_detector_node"
+path = "src/main.rs"
+
+# Perfil propio para que colcon no se mezcle con los builds normales de cargo
+[profile.colcon]
+inherits = "release"
+
+[dependencies]
+r2r = "0.9"
+futures = "0.3"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+serde_yaml = "0.9"
+regex = "1"
+# clang-runtime: r2r (bindgen) carga libclang en tiempo de ejecución; sin esto el build de opencv falla
+opencv = { version = "0.94", default-features = false, features = ["imgproc", "imgcodecs", "clang-runtime"] }
+# load-dynamic: libonnxruntime.so se abre al arrancar (el de /opt/onnxruntime, igual que en C++)
+ort = { version = "=2.0.0-rc.9", default-features = false, features = ["load-dynamic", "ndarray", "cuda", "tensorrt"] }
+# ort no fija ort-sys a su misma versión: sin esto cargo coge otra rc incompatible
+ort-sys = { version = "=2.0.0-rc.9", default-features = false }
+ndarray = "0.16"

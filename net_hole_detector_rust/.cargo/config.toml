@@ -1,0 +1,3 @@
+# Solo se generan los mensajes que usa el nodo (r2r añade solo los que necesita él)
+[env]
+IDL_PACKAGE_FILTER = { value = "std_msgs;sensor_msgs;geometry_msgs;rosgraph_msgs;net_hole_detector_msgs_rust" }

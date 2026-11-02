@@ -1,0 +1,62 @@
+# Detector de agujeros en la red (versión Rust).
+#   GPU (x86 + NVIDIA):  docker compose up -d
+#   CPU (PC o Raspberry Pi):  docker compose --profile cpu up -d net_hole_detector_rust_cpu
+# Los parámetros se cambian en net_hole_detector_rust/config/net_hole_detector.yaml (montado) y con
+# las variables de abajo; basta con reiniciar el contenedor, sin reconstruir.
+
+x-env: &env
+  ROS_DOMAIN_ID: "4"
+  NAMESPACE: net_hole_detector_rust
+  PARAMS_FILE: /config/net_hole_detector.yaml
+  IMAGE_TOPIC: /bluerov/stonefish/front_camera/image_color
+  CAMERA_INFO_TOPIC: /bluerov/stonefish/front_camera/camera_info
+  IMAGE_TRANSPORT: "raw"     # raw | compressed (vacío = el del YAML)
+  IS_RECTIFIED: ""           # true | false (vacío = el del YAML)
+  ENGINE: ""                 # tensorrt | cuda | cpu (vacío = el del YAML)
+  MODEL_PATH: ""             # p. ej. models/yolov8_hole_detector_10_best.onnx
+  USE_SIM_TIME: "false"
+  FASTRTPS_DEFAULT_PROFILES_FILE: /config/fastdds_udp.xml   # sin SHM: ver el XML
+
+x-common: &common
+  network_mode: host
+  ipc: host
+  restart: unless-stopped
+  volumes:
+    - ./net_hole_detector_rust/config/net_hole_detector.yaml:/config/net_hole_detector.yaml:ro
+    - ./docker/fastdds_udp.xml:/config/fastdds_udp.xml:ro
+    - ./net_hole_detector_rust/models:/opt/nhd_ws/share/net_hole_detector_rust/models:ro
+    - trt_cache:/root/.ros/net_hole_detector/trt_cache
+
+services:
+  net_hole_detector_rust:
+    <<: *common
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        ORT_VARIANT: gpu
+    image: net_hole_detector_rust:gpu
+    environment:
+      <<: *env
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  net_hole_detector_rust_cpu:
+    <<: *common
+    profiles: [cpu]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        ORT_VARIANT: cpu
+    image: net_hole_detector_rust:cpu
+    environment:
+      <<: *env
+
+volumes:
+  trt_cache:   # engines de TensorRT ya compilados (la primera compilación tarda minutos)
